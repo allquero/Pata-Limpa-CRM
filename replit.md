@@ -1,44 +1,69 @@
-# [Project name]
+# Pata Limpa CRM
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+CRM SaaS multi-tenant para pet shops de banho e tosa no Brasil — agendamentos Kanban, clientes, pets, serviços, fluxo de caixa, relatórios e leads.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm --filter @workspace/api-server run dev` — API server (porta 5000 → proxy /api)
+- `pnpm --filter @workspace/grooming-crm run dev` — Frontend React (porta dinâmica → proxy /)
+- `pnpm run typecheck` — typecheck completo
+- `pnpm run build` — typecheck + build todos os pacotes
+- `pnpm --filter @workspace/api-spec run codegen` — regenerar hooks React Query e schemas Zod do OpenAPI
+- `pnpm --filter @workspace/db run push` — aplicar mudanças no schema do banco (só dev)
+- Variável obrigatória: `DATABASE_URL` — string de conexão PostgreSQL
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Validação: Zod (`zod/v4`), `drizzle-zod`
+- API codegen: Orval (do spec OpenAPI)
+- Build: esbuild (bundle CJS)
+- Frontend: React + Vite + Tailwind + shadcn/ui + @dnd-kit + Recharts + date-fns
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/api-server/` — servidor Express com todas as rotas
+- `artifacts/grooming-crm/` — frontend React/Vite em português
+- `lib/db/src/schema/` — 8 tabelas: tenants, clients, pets, services, packages, appointments, financial_entries, message_templates
+- `lib/api-spec/openapi.yaml` — spec OpenAPI (fonte da verdade)
+- `lib/api-client-react/` — hooks React Query gerados
+- `lib/api-zod/` — schemas Zod gerados
+- `artifacts/grooming-crm/src/pages/` — 9 páginas: Dashboard, Clientes, Agendamentos, Serviços, Financeiro, Relatórios, Mensagens, Leads, Empresas
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- `tenantId = 1` fixo no frontend (sem auth por enquanto, multi-tenant pronto no backend)
+- Rotas de agendamentos/financeiro parseiam datas manualmente de `req.query` em vez de usar `zod.date()` (que não coerce strings HTTP)
+- Enum `PetSize` com 9 variações (mini_curto … gigante) para preços diferenciados por porte e pelagem
+- Agendamentos recorrentes: cria N cópias com intervalo de 7 dias e `recurringGroupId` UUID compartilhado
+- Kanban de agendamentos usa `@dnd-kit` com drop em colunas de status; atualiza via PATCH `/appointments/:id/status`
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Dashboard**: métricas do dia/semana, receita do mês, agendamentos recentes
+- **Agendamentos**: Kanban drag-and-drop por status (Aguardando / Em Atendimento / Concluído / Cancelado), visão dia/semana, criação com recorrência semanal e confirmação WhatsApp
+- **Clientes**: CRUD com busca, notas e expansão inline de pets
+- **Pets**: cadastro por cliente com porte/pelagem e raça
+- **Serviços**: CRUD agrupado por nome com preços por porte
+- **Financeiro**: lançamentos de receita/despesa/despesa_fixa com resumo e filtros por período
+- **Relatórios**: gráficos de receita, atendimentos por status/porte, top 10 clientes (Recharts)
+- **Mensagens**: editor de templates WhatsApp com variáveis inseríveis
+- **Leads**: clientes sem agendamento há X dias com botão de WhatsApp e template selecionável
+- **Empresas**: dados cadastrais do pet shop
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Toda UI em Português (Brasil)
+- Moeda em R$ (BRL), formato pt-BR
+- Ícone pata + nome "Pata Limpa" na sidebar
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Ao adicionar novos campos de data em query params, parse manualmente em vez de `z.date()` (não coerce strings HTTP)
+- `pnpm run typecheck:libs` deve rodar antes do typecheck dos artifacts quando libs mudarem
+- API montada em `/api`, frontend em `/` — ambos roteados pelo proxy Replit
 
 ## Pointers
 

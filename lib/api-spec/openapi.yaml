@@ -3,20 +3,42 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Grooming CRM API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: tenants
+    description: Grooming business tenants
+  - name: clients
+    description: Pet owner clients
+  - name: pets
+    description: Client pets/dogs
+  - name: services
+    description: Grooming services
+  - name: packages
+    description: Service packages
+  - name: appointments
+    description: Appointments
+  - name: financial
+    description: Financial entries
+  - name: templates
+    description: WhatsApp message templates
+  - name: leads
+    description: Lead management
+  - name: reports
+    description: Reports and analytics
+  - name: dashboard
+    description: Dashboard summary
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +46,979 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # Tenants
+  /tenants:
+    get:
+      operationId: listTenants
+      tags: [tenants]
+      summary: List all grooming businesses
+      responses:
+        "200":
+          description: List of tenants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tenant"
+    post:
+      operationId: createTenant
+      tags: [tenants]
+      summary: Create a grooming business
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantInput"
+      responses:
+        "201":
+          description: Created tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+
+  /tenants/{id}:
+    get:
+      operationId: getTenant
+      tags: [tenants]
+      summary: Get a tenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+    patch:
+      operationId: updateTenant
+      tags: [tenants]
+      summary: Update a tenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantUpdate"
+      responses:
+        "200":
+          description: Updated tenant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tenant"
+    delete:
+      operationId: deleteTenant
+      tags: [tenants]
+      summary: Delete a tenant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Clients
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Created client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get a client with their pets
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client with pets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientWithPets"
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientUpdate"
+      responses:
+        "200":
+          description: Updated client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Pets
+  /pets:
+    get:
+      operationId: listPets
+      tags: [pets]
+      summary: List pets
+      parameters:
+        - name: clientId
+          in: query
+          schema:
+            type: integer
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of pets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Pet"
+    post:
+      operationId: createPet
+      tags: [pets]
+      summary: Create a pet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetInput"
+      responses:
+        "201":
+          description: Created pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+
+  /pets/{id}:
+    get:
+      operationId: getPet
+      tags: [pets]
+      summary: Get a pet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+    patch:
+      operationId: updatePet
+      tags: [pets]
+      summary: Update a pet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PetUpdate"
+      responses:
+        "200":
+          description: Updated pet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Pet"
+    delete:
+      operationId: deletePet
+      tags: [pets]
+      summary: Delete a pet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Services
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List services
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+    post:
+      operationId: createService
+      tags: [services]
+      summary: Create a service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceInput"
+      responses:
+        "201":
+          description: Created service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /services/{id}:
+    get:
+      operationId: getService
+      tags: [services]
+      summary: Get a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+    patch:
+      operationId: updateService
+      tags: [services]
+      summary: Update a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdate"
+      responses:
+        "200":
+          description: Updated service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+    delete:
+      operationId: deleteService
+      tags: [services]
+      summary: Delete a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Service Packages
+  /packages:
+    get:
+      operationId: listPackages
+      tags: [packages]
+      summary: List service packages
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Package"
+    post:
+      operationId: createPackage
+      tags: [packages]
+      summary: Create a service package
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageInput"
+      responses:
+        "201":
+          description: Created package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+
+  /packages/{id}:
+    get:
+      operationId: getPackage
+      tags: [packages]
+      summary: Get a service package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+    patch:
+      operationId: updatePackage
+      tags: [packages]
+      summary: Update a service package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageUpdate"
+      responses:
+        "200":
+          description: Updated package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+    delete:
+      operationId: deletePackage
+      tags: [packages]
+      summary: Delete a service package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Appointments
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: petId
+          in: query
+          schema:
+            type: integer
+        - name: clientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentFull"
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Create an appointment (supports recurring weeks)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentInput"
+      responses:
+        "201":
+          description: Created appointment(s)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AppointmentFull"
+
+  /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentFull"
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentUpdate"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentFull"
+    delete:
+      operationId: deleteAppointment
+      tags: [appointments]
+      summary: Delete an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /appointments/{id}/status:
+    patch:
+      operationId: updateAppointmentStatus
+      tags: [appointments]
+      summary: Update appointment kanban status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentStatusUpdate"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentFull"
+
+  # Financial Entries
+  /financial-entries:
+    get:
+      operationId: listFinancialEntries
+      tags: [financial]
+      summary: List financial entries
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: List of financial entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancialEntry"
+    post:
+      operationId: createFinancialEntry
+      tags: [financial]
+      summary: Create a financial entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancialEntryInput"
+      responses:
+        "201":
+          description: Created entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialEntry"
+
+  /financial-entries/summary:
+    get:
+      operationId: getFinancialSummary
+      tags: [financial]
+      summary: Get financial summary (totals by type and period)
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Financial summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialSummary"
+
+  /financial-entries/{id}:
+    get:
+      operationId: getFinancialEntry
+      tags: [financial]
+      summary: Get a financial entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Financial entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialEntry"
+    patch:
+      operationId: updateFinancialEntry
+      tags: [financial]
+      summary: Update a financial entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancialEntryUpdate"
+      responses:
+        "200":
+          description: Updated entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialEntry"
+    delete:
+      operationId: deleteFinancialEntry
+      tags: [financial]
+      summary: Delete a financial entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Message Templates
+  /message-templates:
+    get:
+      operationId: listMessageTemplates
+      tags: [templates]
+      summary: List message templates
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageTemplate"
+    post:
+      operationId: createMessageTemplate
+      tags: [templates]
+      summary: Create a message template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageTemplateInput"
+      responses:
+        "201":
+          description: Created template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageTemplate"
+
+  /message-templates/{id}:
+    get:
+      operationId: getMessageTemplate
+      tags: [templates]
+      summary: Get a message template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageTemplate"
+    patch:
+      operationId: updateMessageTemplate
+      tags: [templates]
+      summary: Update a message template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageTemplateUpdate"
+      responses:
+        "200":
+          description: Updated template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageTemplate"
+    delete:
+      operationId: deleteMessageTemplate
+      tags: [templates]
+      summary: Delete a message template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # Leads
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List clients with days since last appointment
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: minDaysSince
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lead"
+
+  # Reports
+  /reports/revenue:
+    get:
+      operationId: getRevenueReport
+      tags: [reports]
+      summary: Revenue report by period
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Revenue report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevenueReport"
+
+  /reports/appointments:
+    get:
+      operationId: getAppointmentsReport
+      tags: [reports]
+      summary: Appointments report
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Appointments report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentsReport"
+
+  /reports/top-clients:
+    get:
+      operationId: getTopClientsReport
+      tags: [reports]
+      summary: Top clients by revenue and frequency
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Top clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopClient"
+
+  # Dashboard
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      parameters:
+        - name: tenantId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +1029,713 @@ components:
       required:
         - status
 
+    # Tenant
+    Tenant:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    TenantInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+
+    TenantUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+
+    # Client
+    Client:
+      type: object
+      required: [id, tenantId, name, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ClientWithPets:
+      type: object
+      required: [id, tenantId, name, createdAt, pets]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+
+    ClientInput:
+      type: object
+      required: [tenantId, name]
+      properties:
+        tenantId:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        notes:
+          type: string
+
+    ClientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        notes:
+          type: string
+
+    # Pet
+    Pet:
+      type: object
+      required: [id, clientId, name, size, createdAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        name:
+          type: string
+        breed:
+          type: ["string", "null"]
+        size:
+          type: string
+          enum:
+            - mini_curto
+            - mini_longo
+            - pequeno_curto
+            - pequeno_longo
+            - medio_curto
+            - medio_longo
+            - grande_curto
+            - grande_longo
+            - gigante
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    PetInput:
+      type: object
+      required: [clientId, name, size]
+      properties:
+        clientId:
+          type: integer
+        name:
+          type: string
+        breed:
+          type: string
+        size:
+          type: string
+          enum:
+            - mini_curto
+            - mini_longo
+            - pequeno_curto
+            - pequeno_longo
+            - medio_curto
+            - medio_longo
+            - grande_curto
+            - grande_longo
+            - gigante
+        notes:
+          type: string
+
+    PetUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        breed:
+          type: string
+        size:
+          type: string
+          enum:
+            - mini_curto
+            - mini_longo
+            - pequeno_curto
+            - pequeno_longo
+            - medio_curto
+            - medio_longo
+            - grande_curto
+            - grande_longo
+            - gigante
+        notes:
+          type: string
+
+    # Service
+    Service:
+      type: object
+      required: [id, tenantId, name, size, price, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        size:
+          type: string
+          enum:
+            - mini_curto
+            - mini_longo
+            - pequeno_curto
+            - pequeno_longo
+            - medio_curto
+            - medio_longo
+            - grande_curto
+            - grande_longo
+            - gigante
+        price:
+          type: number
+        durationMinutes:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ServiceInput:
+      type: object
+      required: [tenantId, name, size, price]
+      properties:
+        tenantId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        size:
+          type: string
+          enum:
+            - mini_curto
+            - mini_longo
+            - pequeno_curto
+            - pequeno_longo
+            - medio_curto
+            - medio_longo
+            - grande_curto
+            - grande_longo
+            - gigante
+        price:
+          type: number
+        durationMinutes:
+          type: integer
+
+    ServiceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        size:
+          type: string
+          enum:
+            - mini_curto
+            - mini_longo
+            - pequeno_curto
+            - pequeno_longo
+            - medio_curto
+            - medio_longo
+            - grande_curto
+            - grande_longo
+            - gigante
+        price:
+          type: number
+        durationMinutes:
+          type: integer
+
+    # Package
+    Package:
+      type: object
+      required: [id, tenantId, name, price, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        serviceIds:
+          type: array
+          items:
+            type: integer
+        price:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    PackageInput:
+      type: object
+      required: [tenantId, name, price]
+      properties:
+        tenantId:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        serviceIds:
+          type: array
+          items:
+            type: integer
+        price:
+          type: number
+
+    PackageUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        serviceIds:
+          type: array
+          items:
+            type: integer
+        price:
+          type: number
+
+    # Appointment
+    AppointmentFull:
+      type: object
+      required: [id, tenantId, petId, clientId, scheduledDate, status, totalPrice, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        petId:
+          type: integer
+        clientId:
+          type: integer
+        serviceId:
+          type: ["integer", "null"]
+        packageId:
+          type: ["integer", "null"]
+        scheduledDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [aguardando, em_atendimento, concluido, cancelado]
+        totalPrice:
+          type: number
+        notes:
+          type: ["string", "null"]
+        recurringWeeks:
+          type: ["integer", "null"]
+        recurringGroupId:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        pet:
+          $ref: "#/components/schemas/Pet"
+        client:
+          $ref: "#/components/schemas/Client"
+        service:
+          type: ["object", "null"]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            price:
+              type: number
+        package:
+          type: ["object", "null"]
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            price:
+              type: number
+
+    AppointmentInput:
+      type: object
+      required: [tenantId, petId, clientId, scheduledDate, totalPrice]
+      properties:
+        tenantId:
+          type: integer
+        petId:
+          type: integer
+        clientId:
+          type: integer
+        serviceId:
+          type: integer
+        packageId:
+          type: integer
+        scheduledDate:
+          type: string
+          format: date-time
+        totalPrice:
+          type: number
+        notes:
+          type: string
+        recurringWeeks:
+          type: integer
+
+    AppointmentUpdate:
+      type: object
+      properties:
+        petId:
+          type: integer
+        serviceId:
+          type: integer
+        packageId:
+          type: integer
+        scheduledDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [aguardando, em_atendimento, concluido, cancelado]
+        totalPrice:
+          type: number
+        notes:
+          type: string
+
+    AppointmentStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [aguardando, em_atendimento, concluido, cancelado]
+
+    # Financial Entry
+    FinancialEntry:
+      type: object
+      required: [id, tenantId, type, description, amount, date, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        type:
+          type: string
+          enum: [receita, despesa, despesa_fixa]
+        description:
+          type: string
+        amount:
+          type: number
+        date:
+          type: string
+          format: date
+        category:
+          type: ["string", "null"]
+        appointmentId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    FinancialEntryInput:
+      type: object
+      required: [tenantId, type, description, amount, date]
+      properties:
+        tenantId:
+          type: integer
+        type:
+          type: string
+          enum: [receita, despesa, despesa_fixa]
+        description:
+          type: string
+        amount:
+          type: number
+        date:
+          type: string
+          format: date
+        category:
+          type: string
+        appointmentId:
+          type: integer
+
+    FinancialEntryUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [receita, despesa, despesa_fixa]
+        description:
+          type: string
+        amount:
+          type: number
+        date:
+          type: string
+          format: date
+        category:
+          type: string
+
+    FinancialSummary:
+      type: object
+      required: [totalReceitas, totalDespesas, totalDespesasFixas, saldo]
+      properties:
+        totalReceitas:
+          type: number
+        totalDespesas:
+          type: number
+        totalDespesasFixas:
+          type: number
+        saldo:
+          type: number
+        byMonth:
+          type: array
+          items:
+            type: object
+            required: [month, receitas, despesas, saldo]
+            properties:
+              month:
+                type: string
+              receitas:
+                type: number
+              despesas:
+                type: number
+              saldo:
+                type: number
+
+    # Message Template
+    MessageTemplate:
+      type: object
+      required: [id, tenantId, name, type, content, createdAt]
+      properties:
+        id:
+          type: integer
+        tenantId:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [confirmacao, lembrete, leads]
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    MessageTemplateInput:
+      type: object
+      required: [tenantId, name, type, content]
+      properties:
+        tenantId:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [confirmacao, lembrete, leads]
+        content:
+          type: string
+
+    MessageTemplateUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [confirmacao, lembrete, leads]
+        content:
+          type: string
+
+    # Lead
+    Lead:
+      type: object
+      required: [clientId, clientName, phone, daysSinceLastAppointment]
+      properties:
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        daysSinceLastAppointment:
+          type: ["integer", "null"]
+        lastAppointmentDate:
+          type: ["string", "null"]
+        totalAppointments:
+          type: integer
+        pets:
+          type: array
+          items:
+            type: object
+            required: [id, name, size]
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              size:
+                type: string
+
+    # Reports
+    RevenueReport:
+      type: object
+      required: [totalRevenue, totalAppointments, averageTicket, data]
+      properties:
+        totalRevenue:
+          type: number
+        totalAppointments:
+          type: integer
+        averageTicket:
+          type: number
+        data:
+          type: array
+          items:
+            type: object
+            required: [period, revenue, count]
+            properties:
+              period:
+                type: string
+              revenue:
+                type: number
+              count:
+                type: integer
+
+    AppointmentsReport:
+      type: object
+      required: [total, byStatus, bySize, data]
+      properties:
+        total:
+          type: integer
+        byStatus:
+          type: array
+          items:
+            type: object
+            required: [status, count]
+            properties:
+              status:
+                type: string
+              count:
+                type: integer
+        bySize:
+          type: array
+          items:
+            type: object
+            required: [size, count]
+            properties:
+              size:
+                type: string
+              count:
+                type: integer
+        data:
+          type: array
+          items:
+            type: object
+            required: [date, count]
+            properties:
+              date:
+                type: string
+              count:
+                type: integer
+
+    TopClient:
+      type: object
+      required: [clientId, clientName, totalRevenue, totalAppointments]
+      properties:
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        totalRevenue:
+          type: number
+        totalAppointments:
+          type: integer
+        lastAppointmentDate:
+          type: ["string", "null"]
+
+    # Dashboard
+    DashboardSummary:
+      type: object
+      required: [todayAppointments, weekAppointments, monthRevenue, activeClients, pendingAppointments]
+      properties:
+        todayAppointments:
+          type: integer
+        weekAppointments:
+          type: integer
+        monthRevenue:
+          type: number
+        activeClients:
+          type: integer
+        pendingAppointments:
+          type: integer
+        recentAppointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppointmentFull"
