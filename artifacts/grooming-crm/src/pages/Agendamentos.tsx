@@ -5,7 +5,7 @@ import {
 } from "@dnd-kit/core";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import {
-  useListAppointments, useUpdateAppointmentStatus, useCreateAppointment,
+  useListAppointments, useUpdateAppointment, useUpdateAppointmentStatus, useCreateAppointment,
   useDeleteAppointment, useListClients, useListPets, useListServices,
   useListPackages, useCreateClient, useCreatePet, useSellPackage,
   getListPetsQueryKey,
@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Trash2, ChevronLeft, ChevronRight, Clock, PawPrint,
   MessageSquare, UserPlus, ShoppingCart, CalendarCheck,
-  ChevronRight as ArrowNext, Search, X,
+  ChevronRight as ArrowNext, Search, X, CalendarDays,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -58,7 +58,7 @@ function formatBRL(v: number) {
 
 // ─── Card components ──────────────────────────────────────────────────────────
 
-function AppointmentCard({ appt, clients, pets, services, packages, onDelete, isDragging = false }: {
+function AppointmentCard({ appt, clients, pets, services, packages, onDelete, isDragging = false, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
@@ -66,6 +66,13 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
   packages: Package[];
   onDelete: (id: number) => void;
   isDragging?: boolean;
+  isEditingDate?: boolean;
+  editDate?: string;
+  editTime?: string;
+  onStartEditDate?: () => void;
+  onChangeEditDate?: (date: string, time: string) => void;
+  onSaveEditDate?: () => void;
+  onCancelEditDate?: () => void;
 }) {
   const pet = pets.find(p => p.id === appt.petId);
   const client = clients.find(c => c.id === appt.clientId);
@@ -73,6 +80,7 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
   const pkg = packages.find(p => p.id === appt.packageId);
   const time = new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
   const price = Number(appt.totalPrice);
+  const dateStr = new Date(appt.scheduledDate).toISOString().substring(0, 10);
 
   const openWhatsapp = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -102,10 +110,45 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
         </button>
       </div>
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-dashed">
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          {time}
-        </div>
+        {isEditingDate ? (
+          <div className="flex items-center gap-1 flex-1" onClick={e => e.stopPropagation()}>
+            <Input
+              type="date"
+              value={editDate ?? dateStr}
+              onChange={e => onChangeEditDate?.(e.target.value, editTime ?? time)}
+              className="h-6 text-[10px] px-1 py-0 w-[110px]"
+            />
+            <Input
+              type="time"
+              value={editTime ?? time}
+              onChange={e => onChangeEditDate?.(editDate ?? dateStr, e.target.value)}
+              className="h-6 text-[10px] px-1 py-0 w-[70px]"
+            />
+            <button
+              onClick={e => { e.stopPropagation(); onSaveEditDate?.(); }}
+              className="p-0.5 rounded hover:bg-green-50 text-green-600"
+              title="Salvar"
+            >
+              <CalendarCheck className="h-3 w-3" />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); onCancelEditDate?.(); }}
+              className="p-0.5 rounded hover:bg-red-50 text-red-500"
+              title="Cancelar"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={e => { e.stopPropagation(); onStartEditDate?.(); }}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+            title="Editar data/hora"
+          >
+            <Clock className="h-3 w-3" />
+            {time}
+          </button>
+        )}
         <div className="flex items-center gap-1">
           <span className="text-xs font-semibold text-primary">{formatBRL(price)}</span>
           {client?.phone && (
@@ -119,23 +162,45 @@ function AppointmentCard({ appt, clients, pets, services, packages, onDelete, is
   );
 }
 
-function DraggableCard({ appt, clients, pets, services, packages, onDelete }: {
+function DraggableCard({ appt, clients, pets, services, packages, onDelete, isEditingDate, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   appt: Appointment;
   clients: Client[];
   pets: Pet[];
   services: Service[];
   packages: Package[];
   onDelete: (id: number) => void;
+  isEditingDate?: boolean;
+  editDate?: string;
+  editTime?: string;
+  onStartEditDate?: () => void;
+  onChangeEditDate?: (date: string, time: string) => void;
+  onSaveEditDate?: () => void;
+  onCancelEditDate?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: appt.id });
   return (
     <div ref={setNodeRef} {...listeners} {...attributes}>
-      <AppointmentCard appt={appt} clients={clients} pets={pets} services={services} packages={packages} onDelete={onDelete} isDragging={isDragging} />
+      <AppointmentCard
+        appt={appt}
+        clients={clients}
+        pets={pets}
+        services={services}
+        packages={packages}
+        onDelete={onDelete}
+        isDragging={isDragging}
+        isEditingDate={isEditingDate}
+        editDate={editDate}
+        editTime={editTime}
+        onStartEditDate={onStartEditDate}
+        onChangeEditDate={onChangeEditDate}
+        onSaveEditDate={onSaveEditDate}
+        onCancelEditDate={onCancelEditDate}
+      />
     </div>
   );
 }
 
-function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete }: {
+function KanbanColumn({ status, label, color, bg, appointments, clients, pets, services, packages, onDelete, editingApptId, editDate, editTime, onStartEditDate, onChangeEditDate, onSaveEditDate, onCancelEditDate }: {
   status: AppStatus;
   label: string;
   color: string;
@@ -146,6 +211,13 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
   services: Service[];
   packages: Package[];
   onDelete: (id: number) => void;
+  editingApptId: number | null;
+  editDate: string;
+  editTime: string;
+  onStartEditDate: (appt: Appointment) => void;
+  onChangeEditDate: (date: string, time: string) => void;
+  onSaveEditDate: (appt: Appointment) => void;
+  onCancelEditDate: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   return (
@@ -159,7 +231,22 @@ function KanbanColumn({ status, label, color, bg, appointments, clients, pets, s
           <div className="flex items-center justify-center h-24 text-xs text-muted-foreground">Nenhum agendamento</div>
         )}
         {appointments.map(appt => (
-          <DraggableCard key={appt.id} appt={appt} clients={clients} pets={pets} services={services} packages={packages} onDelete={onDelete} />
+          <DraggableCard
+            key={appt.id}
+            appt={appt}
+            clients={clients}
+            pets={pets}
+            services={services}
+            packages={packages}
+            onDelete={onDelete}
+            isEditingDate={editingApptId === appt.id}
+            editDate={editDate}
+            editTime={editTime}
+            onStartEditDate={() => onStartEditDate(appt)}
+            onChangeEditDate={onChangeEditDate}
+            onSaveEditDate={() => onSaveEditDate(appt)}
+            onCancelEditDate={onCancelEditDate}
+          />
         ))}
       </div>
     </div>
@@ -225,6 +312,11 @@ export default function Agendamentos() {
   const [sellOpen, setSellOpen] = useState(false);
   const [sell, setSell] = useState(emptySell);
 
+  // Inline date edit in Kanban
+  const [editingApptId, setEditingApptId] = useState<number | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const weekStart = startOfWeek(selectedDate, { weekStartsOn: 0 });
@@ -274,11 +366,43 @@ export default function Agendamentos() {
     : [];
 
   const updateStatus = useUpdateAppointmentStatus();
+  const updateAppointment = useUpdateAppointment();
   const createAppointment = useCreateAppointment();
   const deleteAppointment = useDeleteAppointment();
   const createClient = useCreateClient();
   const createPet = useCreatePet();
   const sellPackage = useSellPackage();
+
+  // ── Inline date editing handlers ───────────────────────────────────────────
+  const startEditDate = (appt: Appointment) => {
+    setEditingApptId(appt.id);
+    setEditDate(new Date(appt.scheduledDate).toISOString().substring(0, 10));
+    setEditTime(new Date(appt.scheduledDate).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false }));
+  };
+  const changeEditDate = (date: string, time: string) => {
+    setEditDate(date);
+    setEditTime(time);
+  };
+  const saveEditDate = async (appt: Appointment) => {
+    if (!editDate || !editTime) return;
+    const dt = new Date(`${editDate}T${editTime}:00`);
+    try {
+      await updateAppointment.mutateAsync({
+        id: appt.id,
+        data: { scheduledDate: dt.toISOString() },
+      });
+      toast({ title: "Data/hora atualizada!" });
+      setEditingApptId(null);
+      refetch();
+    } catch {
+      toast({ title: "Erro ao atualizar data", variant: "destructive" });
+    }
+  };
+  const cancelEditDate = () => {
+    setEditingApptId(null);
+    setEditDate("");
+    setEditTime("");
+  };
 
   // ── Casual: services filtered by pet size ──────────────────────────────────
   const casualFilteredServices = casual.petSize
@@ -569,6 +693,13 @@ export default function Agendamentos() {
               services={services as Service[]}
               packages={packages as Package[]}
               onDelete={handleDelete}
+              editingApptId={editingApptId}
+              editDate={editDate}
+              editTime={editTime}
+              onStartEditDate={startEditDate}
+              onChangeEditDate={changeEditDate}
+              onSaveEditDate={saveEditDate}
+              onCancelEditDate={cancelEditDate}
             />
           ))}
         </div>
