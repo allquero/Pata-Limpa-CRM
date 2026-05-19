@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent,
   PointerSensor, useSensor, useSensors, closestCorners
@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Trash2, ChevronLeft, ChevronRight, Clock, PawPrint,
   MessageSquare, UserPlus, ShoppingCart, CalendarCheck,
-  ChevronRight as ArrowNext,
+  ChevronRight as ArrowNext, Search, X,
 } from "lucide-react";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -217,6 +217,9 @@ export default function Agendamentos() {
   const [casualOpen, setCasualOpen] = useState(false);
   const [casualStep, setCasualStep] = useState(0);
   const [casual, setCasual] = useState(emptyCasual);
+  const [casualFoundClient, setCasualFoundClient] = useState<Client | null>(null);
+  const [casualSearchQuery, setCasualSearchQuery] = useState("");
+  const [casualSelectedPetId, setCasualSelectedPetId] = useState<string>("");
 
   // Sell package modal
   const [sellOpen, setSellOpen] = useState(false);
@@ -245,6 +248,30 @@ export default function Agendamentos() {
   const { data: sellClientPets = [] } = useListPets(sellPetParams, {
     query: { queryKey: getListPetsQueryKey(sellPetParams), enabled: !!sell.clientId },
   });
+
+  // Pets for casual modal — only fetched when an existing client is found
+  const casualClientPetParams = casualFoundClient ? { clientId: casualFoundClient.id } : undefined;
+  const { data: casualClientPets = [], isFetched: casualClientPetsFetched } = useListPets(casualClientPetParams, {
+    query: { queryKey: getListPetsQueryKey(casualClientPetParams), enabled: !!casualFoundClient },
+  });
+
+  // Auto-select "new" pet when found client has no registered pets
+  useEffect(() => {
+    if (casualFoundClient && casualClientPetsFetched && (casualClientPets as Pet[]).length === 0) {
+      setCasualSelectedPetId("new");
+    }
+  }, [casualFoundClient, casualClientPetsFetched, casualClientPets]);
+
+  // Live search results for casual modal (client-side, min 2 chars)
+  // Phone matching is only applied when the query looks like a phone (only digits/spaces/dashes/parens)
+  const casualSearchQuery_trimmed = casualSearchQuery.trim();
+  const isPhoneQuery = casualSearchQuery_trimmed.length > 0 && /^[\d\s\-\(\)]+$/.test(casualSearchQuery_trimmed);
+  const casualSearchResults = casualSearchQuery_trimmed.length >= 2
+    ? (clients as Client[]).filter(c =>
+        c.name.toLowerCase().includes(casualSearchQuery_trimmed.toLowerCase()) ||
+        (isPhoneQuery && (c.phone ?? "").replace(/\D/g, "").includes(casualSearchQuery_trimmed.replace(/\D/g, "")))
+      ).slice(0, 6)
+    : [];
 
   const updateStatus = useUpdateAppointmentStatus();
   const createAppointment = useCreateAppointment();
@@ -310,11 +337,18 @@ export default function Agendamentos() {
   const openCasual = () => {
     setCasual(emptyCasual);
     setCasualStep(0);
+    setCasualFoundClient(null);
+    setCasualSearchQuery("");
+    setCasualSelectedPetId("");
     setCasualOpen(true);
   };
 
   const casualNextStep = () => {
     if (casualStep === 0) {
+      if (casualFoundClient) {
+        setCasualStep(2);
+        return;
+      }
       if (!casual.clientName.trim()) { toast({ title: "Nome do cliente é obrigatório", variant: "destructive" }); return; }
       if (!casual.clientPhone.trim()) { toast({ title: "Telefone é obrigatório", variant: "destructive" }); return; }
     }
@@ -325,40 +359,85 @@ export default function Agendamentos() {
     setCasualStep(s => s + 1);
   };
 
+  const casualPrevStep = () => {
+    if (casualStep === 2 && casualFoundClient) {
+      setCasualStep(0);
+    } else {
+      setCasualStep(s => s - 1);
+    }
+  };
+
   const handleCasualSave = async () => {
     if (!casual.serviceId) { toast({ title: "Selecione um serviço", variant: "destructive" }); return; }
     if (!casual.scheduledDate || !casual.scheduledTime) { toast({ title: "Data e horário são obrigatórios", variant: "destructive" }); return; }
     if (!casual.totalPrice) { toast({ title: "Informe o valor", variant: "destructive" }); return; }
     if (!casual.petSize) { toast({ title: "Porte do pet é obrigatório", variant: "destructive" }); return; }
+
+    if (casualFoundClient) {
+      const usingExistingPet = casualSelectedPetId && casualSelectedPetId !== "new";
+      if (!usingExistingPet) {
+        if (!casual.petName.trim()) { toast({ title: "Nome do pet é obrigatório", variant: "destructive" }); return; }
+      }
+      if (!casualSelectedPetId) { toast({ title: "Selecione um pet", variant: "destructive" }); return; }
+    }
+
     try {
-      const newClient: Client = await createClient.mutateAsync({
-        data: {
-          tenantId: DEFAULT_TENANT_ID,
-          name: casual.clientName.trim(),
-          phone: casual.clientPhone.trim(),
-        },
-      });
-      const newPet: Pet = await createPet.mutateAsync({
-        data: {
-          clientId: newClient.id,
-          name: casual.petName.trim(),
-          breed: casual.petBreed.trim() || undefined,
-          size: casual.petSize,
-        },
-      });
+      let resolvedClientId: number;
+      let resolvedPetId: number;
+
+      if (casualFoundClient) {
+        resolvedClientId = casualFoundClient.id;
+        if (casualSelectedPetId && casualSelectedPetId !== "new") {
+          resolvedPetId = Number(casualSelectedPetId);
+        } else {
+          const newPet: Pet = await createPet.mutateAsync({
+            data: {
+              clientId: resolvedClientId,
+              name: casual.petName.trim(),
+              breed: casual.petBreed.trim() || undefined,
+              size: casual.petSize,
+            },
+          });
+          resolvedPetId = newPet.id;
+        }
+      } else {
+        const newClient: Client = await createClient.mutateAsync({
+          data: {
+            tenantId: DEFAULT_TENANT_ID,
+            name: casual.clientName.trim(),
+            phone: casual.clientPhone.trim(),
+          },
+        });
+        resolvedClientId = newClient.id;
+        const newPet: Pet = await createPet.mutateAsync({
+          data: {
+            clientId: resolvedClientId,
+            name: casual.petName.trim(),
+            breed: casual.petBreed.trim() || undefined,
+            size: casual.petSize,
+          },
+        });
+        resolvedPetId = newPet.id;
+      }
+
       const dt = new Date(`${casual.scheduledDate}T${casual.scheduledTime}:00`);
       await createAppointment.mutateAsync({
         data: {
           tenantId: DEFAULT_TENANT_ID,
-          clientId: newClient.id,
-          petId: newPet.id,
+          clientId: resolvedClientId,
+          petId: resolvedPetId,
           serviceId: Number(casual.serviceId),
           scheduledDate: dt.toISOString(),
           totalPrice: Number(casual.totalPrice),
           notes: casual.notes || undefined,
         },
       });
-      toast({ title: "Agendamento criado!", description: `${casual.clientName} · ${casual.petName}` });
+
+      const clientName = casualFoundClient?.name ?? casual.clientName;
+      const petName = casualSelectedPetId && casualSelectedPetId !== "new"
+        ? (casualClientPets as Pet[]).find(p => p.id === Number(casualSelectedPetId))?.name ?? ""
+        : casual.petName;
+      toast({ title: "Agendamento criado!", description: `${clientName} · ${petName}` });
       setCasualOpen(false);
       refetch();
     } catch {
@@ -536,23 +615,87 @@ export default function Agendamentos() {
             {/* Step 0: Cliente */}
             {casualStep === 0 && (
               <>
-                <div className="space-y-1.5">
-                  <Label>Nome do cliente *</Label>
-                  <Input
-                    placeholder="Ex: Maria Silva"
-                    value={casual.clientName}
-                    onChange={e => setCasual(f => ({ ...f, clientName: e.target.value }))}
-                    autoFocus
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Telefone / WhatsApp *</Label>
-                  <Input
-                    placeholder="Ex: 11 99999-0000"
-                    value={casual.clientPhone}
-                    onChange={e => setCasual(f => ({ ...f, clientPhone: e.target.value }))}
-                  />
-                </div>
+                {casualFoundClient ? (
+                  <div className="rounded-lg border bg-green-50 border-green-200 p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-green-700 mb-0.5">Cliente encontrado</p>
+                        <p className="font-semibold text-sm">{casualFoundClient.name}</p>
+                        {casualFoundClient.phone && (
+                          <p className="text-xs text-muted-foreground">{casualFoundClient.phone}</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setCasualFoundClient(null); setCasualSelectedPetId(""); setCasualSearchQuery(""); }}
+                        className="p-1 rounded hover:bg-green-100 text-green-700"
+                        title="Remover seleção"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label>Buscar cliente existente</Label>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          className="pl-9"
+                          placeholder="Nome ou telefone..."
+                          value={casualSearchQuery}
+                          onChange={e => setCasualSearchQuery(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      {casualSearchResults.length > 0 && (
+                        <div className="border rounded-md divide-y shadow-sm bg-white z-10">
+                          {casualSearchResults.map(c => (
+                            <button
+                              key={c.id}
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center justify-between gap-2"
+                              onClick={() => { setCasualFoundClient(c); setCasualSearchQuery(""); }}
+                            >
+                              <span className="font-medium">{c.name}</span>
+                              {c.phone && <span className="text-muted-foreground text-xs shrink-0">{c.phone}</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {casualSearchQuery.trim().length >= 2 && casualSearchResults.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Nenhum cliente encontrado. Preencha abaixo para cadastrar.</p>
+                      )}
+                    </div>
+
+                    <div className="relative my-1">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">ou cadastrar novo</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label>Nome do cliente *</Label>
+                      <Input
+                        placeholder="Ex: Maria Silva"
+                        value={casual.clientName}
+                        onChange={e => setCasual(f => ({ ...f, clientName: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Telefone / WhatsApp *</Label>
+                      <Input
+                        placeholder="Ex: 11 99999-0000"
+                        value={casual.clientPhone}
+                        onChange={e => setCasual(f => ({ ...f, clientPhone: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -596,6 +739,71 @@ export default function Agendamentos() {
             {/* Step 2: Agendamento */}
             {casualStep === 2 && (
               <>
+                {/* Pet selection — only when using existing client */}
+                {casualFoundClient && (
+                  <div className="space-y-1.5">
+                    <Label>Pet *</Label>
+                    <Select
+                      value={casualSelectedPetId}
+                      onValueChange={v => {
+                        setCasualSelectedPetId(v);
+                        if (v !== "new") {
+                          const pet = (casualClientPets as Pet[]).find(p => p.id === Number(v));
+                          if (pet) setCasual(f => ({ ...f, petSize: pet.size as PetInputSize, serviceId: "", totalPrice: "" }));
+                        } else {
+                          setCasual(f => ({ ...f, petSize: "" as PetInputSize | "", serviceId: "", totalPrice: "" }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione o pet" /></SelectTrigger>
+                      <SelectContent>
+                        {(casualClientPets as Pet[]).map(p => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.name} — {PORTE_SIZES[p.size] ?? p.size}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="new">+ Novo pet</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {/* New pet fields — shown when: new client OR "new" pet option selected */}
+                {(!casualFoundClient || casualSelectedPetId === "new") && (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label>Nome do pet *</Label>
+                      <Input
+                        placeholder="Ex: Thor"
+                        value={casual.petName}
+                        onChange={e => setCasual(f => ({ ...f, petName: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Raça</Label>
+                      <Input
+                        placeholder="Ex: Labrador"
+                        value={casual.petBreed}
+                        onChange={e => setCasual(f => ({ ...f, petBreed: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Porte *</Label>
+                      <Select
+                        value={casual.petSize}
+                        onValueChange={v => setCasual(f => ({ ...f, petSize: v as PetInputSize, serviceId: "", totalPrice: "" }))}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione o porte" /></SelectTrigger>
+                        <SelectContent>
+                          {(Object.entries(PORTE_SIZES) as [PetInputSize, string][]).map(([val, lbl]) => (
+                            <SelectItem key={val} value={val}>{lbl}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
                 <div className="space-y-1.5">
                   <Label>Serviço *</Label>
                   <Select
@@ -661,7 +869,7 @@ export default function Agendamentos() {
 
           <DialogFooter className="gap-2">
             {casualStep > 0 && (
-              <Button variant="outline" onClick={() => setCasualStep(s => s - 1)}>Voltar</Button>
+              <Button variant="outline" onClick={casualPrevStep}>Voltar</Button>
             )}
             <Button variant="outline" onClick={() => setCasualOpen(false)}>Cancelar</Button>
             {casualStep < 2 ? (
